@@ -1,10 +1,9 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import re
 import time
+import re
+from datetime import datetime, timedelta
 
 # Set up Chrome options
 chrome_options = Options()
@@ -25,30 +24,56 @@ try:
     # Wait for the content to load
     time.sleep(5)
     
-    # Print the HTML content
-    print("HTML content:")
-    print(driver.page_source)
-    print("\n" + "="*50 + "\n")
+    # Find all rows in the timeline table
+    timeline_rows = driver.find_elements(By.CSS_SELECTOR, 'table tbody tr')
     
-    # Find all td elements with class 'timeline-time'
-    time_elements = driver.find_elements(By.CSS_SELECTOR, 'td.timeline-time')
+    # List to store time-event pairs
+    timeline_events = []
+
+    # Iterate through each row
+    for row in timeline_rows:
+        try:
+            # Find time cell (first td)
+            time_cell = row.find_element(By.CSS_SELECTOR, 'td.timeline-time')
+            time_text = time_cell.text.strip()
+            
+            # Find event cell (second td)
+            event_cell = row.find_element(By.CSS_SELECTOR, 'td.timeline-description')
+            event_text = event_cell.text.strip()
+            
+            # Only add non-empty entries
+            if time_text and event_text:
+                timeline_events.append({
+                    'time': time_text,
+                    'event': event_text
+                })
+        except:
+            # Skip rows that don't have the expected structure
+            continue
+
+    # Print all extracted time-event pairs with Discord timestamps
+    print("Launch Timeline with Discord Timestamps:")
+    print("="*50)
     
-    # List to store all extracted numbers
-    all_numbers = []
-
-    # Iterate through each time element
-    for element in time_elements:
-        # Get text content
-        text = element.text.strip()
-        # Extract numbers including negative and decimal numbers
-        numbers = re.findall(r'-?\d+\.?\d*', text)
-        # Add numbers to the main list
-        all_numbers.extend(numbers)
-
-    # Print all extracted numbers
-    print("Extracted numbers:")
-    for number in all_numbers:
-        print(number)
+    # For demonstration, we'll use current time as the reference point
+    # In a real scenario, you'd use the actual launch time
+    reference_time = datetime.utcnow()
+    
+    for item in timeline_events:
+        # Parse the time (format: HH:MM:SS)
+        time_parts = item['time'].split(':')
+        if len(time_parts) == 3:
+            hours, minutes, seconds = map(int, time_parts)
+            # Convert to timedelta (assuming times are before launch)
+            time_delta = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+            # Calculate actual timestamp (reference - countdown)
+            event_time = reference_time - time_delta
+            # Create Discord timestamp
+            discord_timestamp = f"<t:{int(event_time.timestamp())}:f>"
+            
+            print(f"Time: {item['time']} ({discord_timestamp})")
+            print(f"Event: {item['event']}")
+            print("-" * 30)
         
 except Exception as e:
     print(f"An error occurred: {e}")
