@@ -88,7 +88,7 @@ def extract_text_with_browser(url, wait_time=5):
         text = '\n'.join(chunk for chunk in chunks if chunk)
 
         # Keep only from the webcast line onward if present
-        target_line = "A live webcast of this mission will begin about 15 minutes prior to liftoff"
+        target_line = "SpaceX's Falcon 9 rocket"
         if target_line in text:
             text = text[text.find(target_line):]
 
@@ -220,6 +220,12 @@ def convert_timeline_to_unix(launch_countdown, timeline_lines):
     return result
 
 def main():
+    print("WARNING: IT MUST BE RUN IN A TERMINAL WITH ACCESS TO THE BROWSER.")
+    print("WARNING: IT MUST BE RUN IN A TERMINAL WITH ACCESS TO THE BROWSER.")
+    print("WARNING: IT MUST BE RUN IN A TERMINAL WITH ACCESS TO THE BROWSER.")
+    print("IT MUST BE THE NEXT LAUNCH TO HAPPEN! OR ELSE IT BREAKS")
+    print("IT MUST BE THE NEXT LAUNCH TO HAPPEN! OR ELSE IT BREAKS")
+    print("IT MUST BE THE NEXT LAUNCH TO HAPPEN! OR ELSE IT BREAKS")
     if len(sys.argv) < 2:
         print("Usage: python browser_text_extractor.py <URL> [wait_time]")
         print("wait_time: seconds to wait for content (default: 5)")
