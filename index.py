@@ -46,15 +46,49 @@ def extract_text_with_browser(url, wait_time=5):
         html_content = driver.page_source
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Try to reconstruct the visible countdown digits
-        countdown_element = soup.find('launch-countdown')
+        countdown_elements = soup.find_all('launch-countdown')
         countdown_text = ""
-        if countdown_element:
-            digit_elements = countdown_element.find_all('launch-countdown-digit')
+        main_countdown = None
+        
+        # Look for countdown elements that are NOT inside the upcoming-launch-widget
+        for element in countdown_elements:
+            # Check if this countdown is inside the sidebar widget
+            parent_widget = element.find_parent(class_='upcoming-launch-widget')
+            if not parent_widget:
+                # This is likely the main countdown
+                main_countdown = element
+                break
+        
+        # If no main countdown found, try to find one not in sidebar context
+        if not main_countdown:
+            for element in countdown_elements:
+                # Additional check for other potential sidebar containers
+                parent_time = element.find_parent('launch-time')
+                if parent_time and parent_time.get('type') == 'widget':
+                    continue  # Skip sidebar widget countdowns
+                main_countdown = element
+                break
+        
+        # Fallback to first one if still not found
+        if not main_countdown and countdown_elements:
+            main_countdown = countdown_elements[0]
+            
+        if main_countdown:
+            digit_elements = main_countdown.find_all('launch-countdown-digit')
             digits = []
             for digit_element in digit_elements:
                 digit_values = digit_element.find('div', class_='digit-values')
                 if digit_values:
+                    # Get the number of digit values to determine digit height
+                    num_digit_values = digit_element.get('numdigitvalues')
+                    if num_digit_values:
+                        try:
+                            num_digit_values = int(num_digit_values)
+                        except Exception:
+                            num_digit_values = 10  # default fallback
+                    else:
+                        num_digit_values = 10  # default fallback
+                        
                     style = digit_values.get('style', '')
                     if 'top:' in style:
                         try:
@@ -64,8 +98,11 @@ def extract_text_with_browser(url, wait_time=5):
                             continue
                         digit_divs = digit_values.find_all('div', class_='digit')
                         if digit_divs:
+                            # Calculate digit height based on num_digit_values
                             digit_height = 13  # px per step (empirical)
-                            if digit_height:
+                            if num_digit_values > 0:
+                                # The total height is (num_digit_values - 1) * digit_height
+                                # But since we're using negative top values, we need to adjust
                                 index = abs(top_value) // digit_height
                                 if 0 <= index < len(digit_divs):
                                     digits.append(digit_divs[index].get_text().strip())
@@ -121,7 +158,7 @@ def call_openrouter(text):
     max_chars = 120_000
     if len(text) > max_chars:
         text = text[:max_chars]
-
+    print(text)
     messages = [
         {
             "role": "system",
@@ -281,7 +318,9 @@ def main():
             for timestamp, original_time, event in events_with_timestamps:
                 # Convert timestamp back to readable format for verification
                 readable_time = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-                print(f"<t:{timestamp}:R> | {readable_time} | {original_time} | {event}")
+                # Escape colons in original_time
+                escaped_time = original_time.replace(":", "\\:")
+                print(f"<t:{timestamp}:R>| {escaped_time} | {event}")
         except ValueError as e:
             print(f"\nError converting timeline: {e}")
             sys.exit(6)
